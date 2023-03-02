@@ -135,7 +135,7 @@ func (t *Event) Msg(v string) error {
 	}
 
 	err := t.l.write(t, v)
-	if err != nil {
+	if err == nil {
 		// Only give back the event and fields to
 		// the event pools if the writing was succesfull.
 		// This way, the send can safely be retried.
