@@ -1,6 +1,8 @@
 package rogu
 
-import "sync"
+import (
+	"sync"
+)
 
 type resetObject interface {
 	Reset()
@@ -19,11 +21,10 @@ func newSafePool[T resetObject](create func() T) safePool[T] {
 }
 
 func (t *safePool[T]) Get() T {
-	v := t.p.Get().(T)
-	return v
+	return t.p.Get().(T)
 }
 
 func (t *safePool[T]) Put(v T) {
 	v.Reset()
-	t.p.Put(t)
+	t.p.Put(v)
 }
