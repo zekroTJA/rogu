@@ -12,8 +12,13 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-colorable"
+	"github.com/muesli/termenv"
 	"github.com/zekrotja/rogu/level"
 )
+
+func init() {
+	lipgloss.SetColorProfile(termenv.ANSI256)
+}
 
 const bufferSize = 2000
 
