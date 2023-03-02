@@ -1,17 +1,25 @@
 package rogu
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-colorable"
 	"github.com/zekrotja/rogu/level"
 )
+
+const bufferSize = 2000
+
+var bufferPool = newSafePool(func() *bytes.Buffer {
+	return bytes.NewBuffer(make([]byte, 0, bufferSize))
+})
 
 // PrettyWriter implements Writer for human readable,
 // colorful, structured console output.
@@ -28,6 +36,8 @@ import (
 // feel free to set custom definitions for
 // the defined styles.
 type PrettyWriter struct {
+	writeMtx sync.Mutex
+
 	Output io.Writer
 
 	NoColor    bool
@@ -60,7 +70,7 @@ var (
 // NewPrettyWriter returns a new instance of PrettyWriter
 // with the given output writers. When no writers are
 // specified, os.Stdout will be used.
-func NewPrettyWriter(outputs ...io.Writer) PrettyWriter {
+func NewPrettyWriter(outputs ...io.Writer) *PrettyWriter {
 	var t PrettyWriter
 
 	if len(outputs) == 0 {
@@ -141,10 +151,10 @@ func NewPrettyWriter(outputs ...io.Writer) PrettyWriter {
 	t.StyleMessage = lipgloss.NewStyle().
 		MarginRight(1)
 
-	return t
+	return &t
 }
 
-func (t PrettyWriter) Write(
+func (t *PrettyWriter) Write(
 	lvl level.Level,
 	fields []*Field,
 	tag string,
@@ -153,25 +163,32 @@ func (t PrettyWriter) Write(
 	callerLine int,
 	msg string,
 ) (err error) {
+	buf := bufferPool.Get()
+	defer func() {
+		if buf.Cap() == bufferSize {
+			bufferPool.Put(buf)
+		}
+	}()
+
 	// -- Timestamp
 
 	if t.TimeFormat != "" {
 		now := time.Now().Format(t.TimeFormat)
-		if err = t.writeFormatted(now, t.StyleTimestamp); err != nil {
+		if err = t.writeFormatted(buf, now, t.StyleTimestamp); err != nil {
 			return err
 		}
 	}
 
 	// -- Level
 
-	if err = t.writeLvl(lvl); err != nil {
+	if err = t.writeLvl(buf, lvl); err != nil {
 		return err
 	}
 
 	// -- Caller
 
 	if callerFile != "" {
-		err = t.writeFormatted(t.formatCaller(callerFile, callerLine), t.StyleCaller)
+		err = t.writeFormatted(buf, t.formatCaller(callerFile, callerLine), t.StyleCaller)
 		if err != nil {
 			return err
 		}
@@ -180,33 +197,42 @@ func (t PrettyWriter) Write(
 	// -- Tag
 
 	if tag != "" {
-		if err = t.writeFormatted(tag, t.StyleTag); err != nil {
+		if err = t.writeFormatted(buf, tag, t.StyleTag); err != nil {
 			return err
 		}
 	}
 
 	// -- Message
 
-	if err = t.writeFormatted(msg, t.StyleMessage); err != nil {
+	if err = t.writeFormatted(buf, msg, t.StyleMessage); err != nil {
 		return err
 	}
 
 	// -- Error
 
 	if lErr != nil {
-		t.writeErr(lErr)
+		t.writeErr(buf, lErr)
 	}
 
 	// -- Fields
 
-	if err = t.writeFields(fields); err != nil {
+	if err = t.writeFields(buf, fields); err != nil {
 		return err
 	}
 
-	return t.writeString("\n")
+	// -- Finish
+
+	if err = t.writeString(buf, "\n"); err != nil {
+		return err
+	}
+
+	t.writeMtx.Lock()
+	defer t.writeMtx.Unlock()
+	_, err = io.Copy(t.Output, buf)
+	return err
 }
 
-func (t PrettyWriter) Close() error {
+func (t *PrettyWriter) Close() error {
 	if c, ok := t.Output.(Closer); ok {
 		return c.Close()
 	}
@@ -220,102 +246,102 @@ func colorWriter(w io.Writer) io.Writer {
 	return colorable.NewNonColorable(w)
 }
 
-func (t PrettyWriter) write(p []byte) error {
-	_, err := t.Output.Write(p)
+func (t *PrettyWriter) write(f io.Writer, p []byte) error {
+	_, err := f.Write(p)
 	return err
 }
 
-func (t PrettyWriter) writeString(p string) error {
-	_, err := fmt.Fprintf(t.Output, "%s", p)
+func (t *PrettyWriter) writeString(f io.Writer, p string) error {
+	_, err := fmt.Fprintf(f, "%s", p)
 	return err
 }
 
-func (t PrettyWriter) writeAny(v interface{}) error {
-	_, err := fmt.Fprintf(t.Output, "%v", v)
+func (t *PrettyWriter) writeAny(f io.Writer, v interface{}) error {
+	_, err := fmt.Fprintf(f, "%v", v)
 	return err
 }
 
-func (t PrettyWriter) writeFormatted(v interface{}, style lipgloss.Style) (err error) {
+func (t *PrettyWriter) writeFormatted(f io.Writer, v interface{}, style lipgloss.Style) (err error) {
 	if t.NoColor {
 		style = style.Copy().UnsetForeground()
 	}
-	return t.writeString(style.Render(fmt.Sprintf("%v", v)))
+	return t.writeString(f, style.Render(fmt.Sprintf("%v", v)))
 }
 
-func (t PrettyWriter) writeLvl(lvl level.Level) (err error) {
+func (t *PrettyWriter) writeLvl(f io.Writer, lvl level.Level) (err error) {
 	switch lvl {
 	case level.Panic:
-		err = t.writeFormatted("PANIC", t.StyleLevelPanic)
+		err = t.writeFormatted(f, "PANIC", t.StyleLevelPanic)
 	case level.Fatal:
-		err = t.writeFormatted("FATAL", t.StyleLevelFatal)
+		err = t.writeFormatted(f, "FATAL", t.StyleLevelFatal)
 	case level.Error:
-		err = t.writeFormatted("ERROR", t.StyleLevelError)
+		err = t.writeFormatted(f, "ERROR", t.StyleLevelError)
 	case level.Warn:
-		err = t.writeFormatted("WARN", t.StyleLevelWarn)
+		err = t.writeFormatted(f, "WARN", t.StyleLevelWarn)
 	case level.Info:
-		err = t.writeFormatted("INFO", t.StyleLevelInfo)
+		err = t.writeFormatted(f, "INFO", t.StyleLevelInfo)
 	case level.Debug:
-		err = t.writeFormatted("DEBUG", t.StyleLevelDebug)
+		err = t.writeFormatted(f, "DEBUG", t.StyleLevelDebug)
 	case level.Trace:
-		err = t.writeFormatted("TRACE", t.StyleLevelTrace)
+		err = t.writeFormatted(f, "TRACE", t.StyleLevelTrace)
 	}
 	return err
 }
 
-func (t PrettyWriter) writeFields(fields []*Field) (err error) {
-	for _, f := range fields {
-		if f.Val != nil {
-			f.valueKind = reflect.TypeOf(f.Val).Kind()
-			if f.valueKind == reflect.Slice || f.valueKind == reflect.Map {
+func (t *PrettyWriter) writeFields(f io.Writer, fields []*Field) (err error) {
+	for _, field := range fields {
+		if field.Val != nil {
+			field.valueKind = reflect.TypeOf(field.Val).Kind()
+			if field.valueKind == reflect.Slice || field.valueKind == reflect.Map {
 				continue
 			}
 		}
 
-		err = t.writeFormatted(fmt.Sprintf("%v=", f.Key), t.StyleFieldKey)
+		err = t.writeFormatted(f, fmt.Sprintf("%v=", field.Key), t.StyleFieldKey)
 		if err != nil {
 			return err
 		}
 
-		if err = t.writeFormatted(t.valueString(f.Val), t.StyleFieldValue); err != nil {
+		if err = t.writeFormatted(f, t.valueString(field.Val), t.StyleFieldValue); err != nil {
 			return err
 		}
 	}
 
-	for _, f := range fields {
-		if f.valueKind != reflect.Slice {
+	for _, field := range fields {
+		if field.valueKind != reflect.Slice {
 			continue
 		}
 
-		err = t.writeFormatted(fmt.Sprintf("%v=", f.Key), t.StyleFieldMultipleKey)
+		err = t.writeFormatted(f, fmt.Sprintf("%v=", field.Key), t.StyleFieldMultipleKey)
 		if err != nil {
 			return err
 		}
 
-		v := reflect.ValueOf(f.Val)
+		v := reflect.ValueOf(field.Val)
 		for i := 0; i < v.Len(); i++ {
 			vi := v.Index(i).Interface()
 			vStr := fmt.Sprintf("[%02d] %s", i, t.valueString(vi))
-			if err = t.writeFormatted(vStr, t.StyleFieldMultipleValue); err != nil {
+			if err = t.writeFormatted(f, vStr, t.StyleFieldMultipleValue); err != nil {
 				return err
 			}
 		}
 	}
 
-	for _, f := range fields {
-		if f.valueKind != reflect.Map {
+	for _, field := range fields {
+		if field.valueKind != reflect.Map {
 			continue
 		}
 
-		err = t.writeFormatted(fmt.Sprintf("%v=", f.Key), t.StyleFieldMultipleKey)
+		err = t.writeFormatted(f, fmt.Sprintf("%v=", field.Key), t.StyleFieldMultipleKey)
 		if err != nil {
 			return err
 		}
 
-		v := reflect.ValueOf(f.Val)
+		v := reflect.ValueOf(field.Val)
 		for _, k := range v.MapKeys() {
 			vi := v.MapIndex(k).Interface()
 			vStr := fmt.Sprintf("[%v] %s", t.valueString(k.Interface()), t.valueString(vi))
-			if err = t.writeFormatted(vStr, t.StyleFieldMultipleValue); err != nil {
+			if err = t.writeFormatted(f, vStr, t.StyleFieldMultipleValue); err != nil {
 				return err
 			}
 		}
@@ -324,14 +350,14 @@ func (t PrettyWriter) writeFields(fields []*Field) (err error) {
 	return nil
 }
 
-func (t PrettyWriter) writeErr(lerr error) (err error) {
-	if err = t.writeFormatted("error=", t.StyleFieldErrorKey); err != nil {
+func (t *PrettyWriter) writeErr(f io.Writer, lerr error) (err error) {
+	if err = t.writeFormatted(f, "error=", t.StyleFieldErrorKey); err != nil {
 		return err
 	}
-	return t.writeFormatted(fmt.Sprintf("\"%s\"", lerr), t.StyleFieldErrorValue)
+	return t.writeFormatted(f, fmt.Sprintf("\"%s\"", lerr), t.StyleFieldErrorValue)
 }
 
-func (t PrettyWriter) valueString(v interface{}) string {
+func (t *PrettyWriter) valueString(v interface{}) string {
 	switch vt := v.(type) {
 	case string:
 		return fmt.Sprintf("\"%s\"", vt)
@@ -351,7 +377,7 @@ func (t PrettyWriter) valueString(v interface{}) string {
 	return fmt.Sprintf("%v", v)
 }
 
-func (t PrettyWriter) formatCaller(file string, line int) string {
+func (t *PrettyWriter) formatCaller(file string, line int) string {
 	fname := fmt.Sprintf("%s:%d", filepath.Base(file), line)
 
 	maxFName := t.StyleCaller.GetWidth() - 2

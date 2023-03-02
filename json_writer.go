@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/zekrotja/rogu/level"
@@ -12,6 +13,8 @@ import (
 // JsonWriter implements Writer for JSON
 // formatted entry output.
 type JsonWriter struct {
+	writeMtx sync.Mutex
+
 	Output     io.Writer
 	TimeFormat string
 }
@@ -23,7 +26,7 @@ var (
 
 // NewJsonWriter returns a new JsonWriter
 // with the passed target output writers.
-func NewJsonWriter(outputs ...io.Writer) JsonWriter {
+func NewJsonWriter(outputs ...io.Writer) *JsonWriter {
 	var t JsonWriter
 
 	if len(outputs) == 0 {
@@ -36,7 +39,7 @@ func NewJsonWriter(outputs ...io.Writer) JsonWriter {
 
 	t.TimeFormat = time.RFC3339
 
-	return t
+	return &t
 }
 
 type field struct {
@@ -60,7 +63,7 @@ type entry struct {
 	Caller    caller      `json:"caller,omitempty"`
 }
 
-func (t JsonWriter) Write(
+func (t *JsonWriter) Write(
 	lvl level.Level,
 	fields []*Field,
 	tag string,
@@ -101,10 +104,12 @@ func (t JsonWriter) Write(
 		}
 	}
 
+	t.writeMtx.Lock()
+	defer t.writeMtx.Unlock()
 	return json.NewEncoder(t.Output).Encode(e)
 }
 
-func (t JsonWriter) Close() error {
+func (t *JsonWriter) Close() error {
 	if c, ok := t.Output.(Closer); ok {
 		return c.Close()
 	}
