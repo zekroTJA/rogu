@@ -39,7 +39,7 @@ type Event struct {
 	err    error
 	caller bool
 
-	l *Logger
+	l eventWriter
 }
 
 func (t *Event) Reset() {
@@ -50,7 +50,7 @@ func (t *Event) Reset() {
 	t.err = nil
 }
 
-func newEvent(l *Logger, lvl level.Level) *Event {
+func newEvent(l eventWriter, lvl level.Level) *Event {
 	e := eventPool.Get()
 	e.l = l
 	e.lvl = lvl

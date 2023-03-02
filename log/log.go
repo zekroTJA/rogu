@@ -9,35 +9,35 @@ var defaultLogger = rogu.NewLogger(rogu.NewPrettyWriter())
 
 // SetWriter sets the specified writer to
 // the logger.
-func SetWriter(w rogu.Writer) *rogu.Logger {
+func SetWriter(w rogu.Writer) rogu.Logger {
 	return defaultLogger.SetWriter(w)
 }
 
 // AddWriter adds another writer to the logger.
-func AddWriter(w rogu.Writer) *rogu.Logger {
+func AddWriter(w rogu.Writer) rogu.Logger {
 	return defaultLogger.AddWriter(w)
 }
 
 // SetLevel sets the minum log leven which
 // will be written.
-func SetLevel(lvl level.Level) *rogu.Logger {
+func SetLevel(lvl level.Level) rogu.Logger {
 	return defaultLogger.SetLevel(lvl)
 }
 
 // SetCaller enabled or disables attaching the
 // caller file and line to the event.
-func SetCaller(enable bool) *rogu.Logger {
+func SetCaller(enable bool) rogu.Logger {
 	return defaultLogger.SetCaller(enable)
 }
 
 // Copy creates and returns a copy of the Logger.
-func Copy() *rogu.Logger {
+func Copy() rogu.Logger {
 	return defaultLogger.Copy()
 }
 
 // Tagged creates a copy of the Logger, sets the
 // given tag and returns it.
-func Tagged(tag string) *rogu.Logger {
+func Tagged(tag string) rogu.Logger {
 	return defaultLogger.Tagged(tag)
 }
 
