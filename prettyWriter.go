@@ -132,7 +132,6 @@ func NewPrettyWriter(outputs ...io.Writer) *PrettyWriter {
 	t.StyleTag = lipgloss.NewStyle().
 		MarginRight(1).
 		Width(10).
-		Bold(true).
 		Foreground(lipgloss.Color("45"))
 
 	t.StyleFieldKey = lipgloss.NewStyle().
