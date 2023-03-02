@@ -96,8 +96,11 @@ func (t *logger) Copy() *logger {
 	return &n
 }
 
-// Tagged creates a copy of the Logger, sets the
-// given tag and returns it.
+// Tagged returns a new logger which references
+// the origin logger but attaches the given
+// tag to every created Entry. Changes made
+// to the underlying logger will be projected
+// to the created logger.
 func (t *logger) Tagged(tag string) Logger {
 	n := &taggedLogger{
 		logger: t,

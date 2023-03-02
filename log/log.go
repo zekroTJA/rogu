@@ -35,8 +35,11 @@ func Copy() rogu.Logger {
 	return defaultLogger.Copy()
 }
 
-// Tagged creates a copy of the Logger, sets the
-// given tag and returns it.
+// Tagged returns a new logger which references
+// the origin logger but attaches the given
+// tag to every created Entry. Changes made
+// to the underlying logger will be projected
+// to the created logger.
 func Tagged(tag string) rogu.Logger {
 	return defaultLogger.Tagged(tag)
 }
