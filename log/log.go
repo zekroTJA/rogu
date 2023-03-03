@@ -44,6 +44,10 @@ func Tagged(tag string) rogu.Logger {
 	return defaultLogger.Tagged(tag)
 }
 
+func Close() error {
+	return defaultLogger.Close()
+}
+
 // Trace creates a new log Event with level trace.
 func Trace() *rogu.Event {
 	return defaultLogger.Trace()

@@ -11,6 +11,8 @@ import (
 // to specify writers which are used to
 // write commited events.
 type Logger interface {
+	Closer
+
 	AddWriter(w Writer) Logger
 	Copy() *logger
 	Debug() *Event
@@ -108,6 +110,15 @@ func (t *logger) Tagged(tag string) Logger {
 	}
 	n.tag = tag
 	return n
+}
+
+// Close closes the set writers or all writers that
+// are added to the logger and which are closable.
+func (t *logger) Close() error {
+	if closer, ok := t.w.(Closer); ok {
+		return closer.Close()
+	}
+	return nil
 }
 
 // Trace creates a new log Event with level trace.
