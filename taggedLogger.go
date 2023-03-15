@@ -51,3 +51,8 @@ func (t *taggedLogger) Fatal() *Event {
 func (t *taggedLogger) Panic() *Event {
 	return t.newEvent(level.Panic).Tag(t.tag)
 }
+
+// WithLevel returns a new log Event with the given level.
+func (t *taggedLogger) WithLevel(lvl level.Level) *Event {
+	return t.newEvent(lvl).Tag(t.tag)
+}

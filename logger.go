@@ -147,11 +147,6 @@ func (t *logger) Error() *Event {
 	return t.newEvent(level.Error)
 }
 
-// WithLevel returns a new log Event with the given level.
-func (t *logger) WithLevel(lvl level.Level) *Event {
-	return t.newEvent(lvl)
-}
-
 // Trace creates a new log Event with level fatal.
 //
 // When commited, the programm will exit with exit
@@ -166,6 +161,11 @@ func (t *logger) Fatal() *Event {
 // called point.
 func (t *logger) Panic() *Event {
 	return t.newEvent(level.Panic)
+}
+
+// WithLevel returns a new log Event with the given level.
+func (t *logger) WithLevel(lvl level.Level) *Event {
+	return t.newEvent(lvl)
 }
 
 func (t *logger) newEvent(lvl level.Level) *Event {
