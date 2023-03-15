@@ -14,7 +14,7 @@ type Logger interface {
 	Closer
 
 	AddWriter(w Writer) Logger
-	Copy() Logger
+	Copy() *logger
 	Debug() *Event
 	Error() *Event
 	Fatal() *Event
@@ -94,7 +94,7 @@ func (t *logger) SetCaller(enable bool) Logger {
 }
 
 // Copy creates and returns a copy of the Logger.
-func (t *logger) Copy() Logger {
+func (t *logger) Copy() *logger {
 	n := *t
 	return &n
 }
