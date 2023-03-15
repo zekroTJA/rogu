@@ -14,7 +14,7 @@ type Logger interface {
 	Closer
 
 	AddWriter(w Writer) Logger
-	Copy() *logger
+	Copy() Logger
 	Debug() *Event
 	Error() *Event
 	Fatal() *Event
@@ -26,6 +26,7 @@ type Logger interface {
 	Tagged(tag string) Logger
 	Trace() *Event
 	Warn() *Event
+	WithLevel(lvl level.Level) *Event
 }
 
 type eventWriter interface {
@@ -93,7 +94,7 @@ func (t *logger) SetCaller(enable bool) Logger {
 }
 
 // Copy creates and returns a copy of the Logger.
-func (t *logger) Copy() *logger {
+func (t *logger) Copy() Logger {
 	n := *t
 	return &n
 }
@@ -144,6 +145,11 @@ func (t *logger) Warn() *Event {
 // Trace creates a new log Event with level error.
 func (t *logger) Error() *Event {
 	return t.newEvent(level.Error)
+}
+
+// WithLevel returns a new log Event with the given level.
+func (t *logger) WithLevel(lvl level.Level) *Event {
+	return t.newEvent(lvl)
 }
 
 // Trace creates a new log Event with level fatal.

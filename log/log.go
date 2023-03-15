@@ -88,3 +88,8 @@ func Fatal() *rogu.Event {
 func Panic() *rogu.Event {
 	return defaultLogger.Panic()
 }
+
+// WithLevel returns a new log Event with the given level.
+func WithLevel(lvl level.Level) *rogu.Event {
+	return defaultLogger.WithLevel(lvl)
+}
