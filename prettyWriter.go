@@ -61,6 +61,7 @@ type PrettyWriter struct {
 	StyleFieldKey           lipgloss.Style
 	StyleFieldValue         lipgloss.Style
 	StyleFieldMultipleKey   lipgloss.Style
+	StyleFieldMultipleIndex lipgloss.Style
 	StyleFieldMultipleValue lipgloss.Style
 	StyleFieldErrorKey      lipgloss.Style
 	StyleFieldErrorValue    lipgloss.Style
@@ -140,13 +141,15 @@ func NewPrettyWriter(outputs ...io.Writer) *PrettyWriter {
 		MarginRight(1)
 	t.StyleFieldMultipleKey = t.StyleFieldKey.Copy().
 		MarginTop(1).
-		MarginLeft(5)
-	t.StyleFieldMultipleValue = t.StyleFieldValue.Copy().
+		MarginLeft(10)
+	t.StyleFieldMultipleIndex = t.StyleFieldValue.Copy().
 		MarginTop(1).
-		MarginLeft(5).
+		MarginLeft(10).
 		PaddingLeft(1).
-		Border(lipgloss.NormalBorder(), false, false, false, true).
+		Foreground(lipgloss.Color("237")).
+		Border(lipgloss.ThickBorder(), false, false, false, true).
 		BorderForeground(lipgloss.Color("237"))
+	t.StyleFieldMultipleValue = lipgloss.NewStyle()
 	t.StyleFieldErrorKey = t.StyleFieldKey.Copy()
 	t.StyleFieldErrorValue = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("160")).
@@ -324,8 +327,11 @@ func (t *PrettyWriter) writeFields(f io.Writer, fields []*Field) (err error) {
 		v := reflect.ValueOf(field.Val)
 		for i := 0; i < v.Len(); i++ {
 			vi := v.Index(i).Interface()
-			vStr := fmt.Sprintf("[%02d] %s", i, t.valueString(vi))
-			if err = t.writeFormatted(f, vStr, t.StyleFieldMultipleValue); err != nil {
+			idx := fmt.Sprintf("% 2d ", i)
+			if err = t.writeFormatted(f, idx, t.StyleFieldMultipleIndex); err != nil {
+				return err
+			}
+			if err = t.writeFormatted(f, t.valueString(vi), t.StyleFieldMultipleValue); err != nil {
 				return err
 			}
 		}
@@ -344,8 +350,11 @@ func (t *PrettyWriter) writeFields(f io.Writer, fields []*Field) (err error) {
 		v := reflect.ValueOf(field.Val)
 		for _, k := range v.MapKeys() {
 			vi := v.MapIndex(k).Interface()
-			vStr := fmt.Sprintf("[%v] %s", t.valueString(k.Interface()), t.valueString(vi))
-			if err = t.writeFormatted(f, vStr, t.StyleFieldMultipleValue); err != nil {
+			idx := fmt.Sprintf("%v:", t.valueString(k.Interface()))
+			if err = t.writeFormatted(f, idx, t.StyleFieldMultipleIndex); err != nil {
+				return err
+			}
+			if err = t.writeFormatted(f, t.valueString(vi), t.StyleFieldMultipleValue); err != nil {
 				return err
 			}
 		}

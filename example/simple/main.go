@@ -16,6 +16,9 @@ func main() {
 		"counter", 78,
 		"params", []interface{}{"foo", "bar", 123},
 	).Msg("Some fields!")
+	log.Debug().Fields(
+		"a_map", map[any]any{"a": 1, 1234: "bar", "bazz": []any{5, 6, 7}},
+	).Msg("Some map fields!")
 	log.Error().Err(errors.New("some error")).Msg("Oh no")
 	log.Trace().Caller().Msg("Here")
 
