@@ -201,7 +201,7 @@ func (t *PrettyWriter) Write(
 	// -- Tag
 
 	if tag != "" {
-		if err = t.writeFormatted(buf, tag, t.StyleTag); err != nil {
+		if err = t.writeFormatted(buf, capLen(tag, t.StyleTag.GetWidth()), t.StyleTag); err != nil {
 			return err
 		}
 	}
@@ -384,10 +384,14 @@ func (t *PrettyWriter) valueString(v interface{}) string {
 func (t *PrettyWriter) formatCaller(file string, line int) string {
 	fname := fmt.Sprintf("%s:%d", filepath.Base(file), line)
 
-	maxFName := t.StyleCaller.GetWidth() - 2
-	if len(fname) > maxFName {
-		fname = "…" + fname[len(fname)-maxFName+1:]
-	}
+	fname = capLen(fname, t.StyleCaller.GetWidth()-2)
 
 	return fmt.Sprintf("<%s>", fname)
+}
+
+func capLen(v string, max int) string {
+	if len(v) > max {
+		v = "…" + v[len(v)-max+1:]
+	}
+	return v
 }
