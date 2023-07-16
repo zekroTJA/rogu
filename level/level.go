@@ -1,6 +1,8 @@
 package level
 
-import "strings"
+import (
+	"strings"
+)
 
 // Level specifies a log level.
 type Level int8
@@ -46,26 +48,47 @@ func (l Level) String() string {
 // ok is false if no level could be matched
 // with the passed stirng.
 func LevelFromString(v string) (lvl Level, ok bool) {
+	if v == "" {
+		return Off, false
+	}
+
+	if lvl, ok = fromDigit(v); ok {
+		return lvl, ok
+	}
+
 	ok = true
 
 	switch strings.ToLower(v) {
-	case "panic":
+	case "p", "pnc", "panic":
 		lvl = Panic
-	case "fatal":
+	case "f", "ftl", "fatal":
 		lvl = Fatal
-	case "error":
+	case "e", "err", "error":
 		lvl = Error
-	case "warn":
+	case "w", "wrn", "warn":
 		lvl = Warn
-	case "info":
+	case "i", "inf", "info":
 		lvl = Info
-	case "debug":
+	case "d", "dbg", "debug":
 		lvl = Debug
-	case "trace":
+	case "t", "trc", "trace":
 		lvl = Trace
 	default:
 		ok = false
 	}
 
 	return lvl, ok
+}
+
+func fromDigit(v string) (lvl Level, ok bool) {
+	if len(v) != 1 {
+		return Off, false
+	}
+
+	c := v[0]
+	if c < '0' || c > '9' {
+		return Off, false
+	}
+
+	return Level(c) - 48, true
 }
