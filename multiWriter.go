@@ -21,7 +21,7 @@ func (t MultiWriter) Write(
 	msg string,
 ) (err error) {
 	for _, w := range t {
-		if err = w.Write(lvl, fields, tag, err, callerFile, callerLine, msg); err != nil {
+		if err = w.Write(lvl, fields, tag, lErr, callerFile, callerLine, msg); err != nil {
 			return err
 		}
 	}
