@@ -33,11 +33,12 @@ func (t *Field) Reset() {
 // Event is used to build and send
 // log messages.
 type Event struct {
-	lvl    level.Level
-	fields []*Field
-	tag    string
-	err    error
-	caller bool
+	lvl       level.Level
+	fields    []*Field
+	tag       string
+	err       error
+	errFormat string
+	caller    bool
 
 	l eventWriter
 }
@@ -72,11 +73,12 @@ func (t *Event) Tag(tag string) *Event {
 // the last field's value will be nil.
 //
 // Example:
-//   rogu.Info().Fields(
-//       "name", "Bob",
-//       "age", 24,
-//       "hobbies", []stirng{"biking", "football", "gaming"},
-//   )
+//
+//	rogu.Info().Fields(
+//	    "name", "Bob",
+//	    "age", 24,
+//	    "hobbies", []stirng{"biking", "football", "gaming"},
+//	)
 func (t *Event) Fields(kv ...any) *Event {
 	if len(kv) == 0 {
 		return t
@@ -116,6 +118,14 @@ func (t *Event) Field(key, value any) *Event {
 // Err sets an error value to the event.
 func (t *Event) Err(err error) *Event {
 	t.err = err
+	return t
+}
+
+// Errf sets an error value to the event formatted in the
+// given format string.
+func (t *Event) Errf(err error, format string) *Event {
+	t.err = err
+	t.errFormat = format
 	return t
 }
 

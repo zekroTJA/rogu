@@ -204,6 +204,7 @@ func (t *logger) write(e *Event, msg string) error {
 		e.fields,
 		e.tag,
 		e.err,
+		e.errFormat,
 		file,
 		line,
 		msg,

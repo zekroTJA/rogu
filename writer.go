@@ -10,6 +10,7 @@ type Writer interface {
 		fields []*Field,
 		tag string,
 		err error,
+		errFormat string,
 		callerFile string,
 		callerLine int,
 		msg string,

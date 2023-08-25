@@ -16,12 +16,13 @@ func (t MultiWriter) Write(
 	fields []*Field,
 	tag string,
 	lErr error,
+	lErrFormat string,
 	callerFile string,
 	callerLine int,
 	msg string,
 ) (err error) {
 	for _, w := range t {
-		if err = w.Write(lvl, fields, tag, lErr, callerFile, callerLine, msg); err != nil {
+		if err = w.Write(lvl, fields, tag, lErr, lErrFormat, callerFile, callerLine, msg); err != nil {
 			return err
 		}
 	}

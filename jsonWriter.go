@@ -2,6 +2,7 @@ package rogu
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"sync"
@@ -68,6 +69,7 @@ func (t *JsonWriter) Write(
 	fields []*Field,
 	tag string,
 	lErr error,
+	lErrFormat string,
 	callerFile string,
 	callerLine int,
 	msg string,
@@ -84,7 +86,11 @@ func (t *JsonWriter) Write(
 	}
 
 	if lErr != nil {
-		e.Error = lErr.Error()
+		if lErrFormat != "" {
+			e.Error = fmt.Sprintf(lErrFormat, lErr)
+		} else {
+			e.Error = lErr.Error()
+		}
 	}
 
 	if len(fields) > 0 {

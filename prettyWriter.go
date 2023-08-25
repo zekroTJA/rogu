@@ -166,6 +166,7 @@ func (t *PrettyWriter) Write(
 	fields []*Field,
 	tag string,
 	lErr error,
+	lErrFormat string,
 	callerFile string,
 	callerLine int,
 	msg string,
@@ -218,7 +219,7 @@ func (t *PrettyWriter) Write(
 	// -- Error
 
 	if lErr != nil {
-		t.writeErr(buf, lErr)
+		t.writeErr(buf, lErr, lErrFormat)
 	}
 
 	// -- Fields
@@ -363,11 +364,14 @@ func (t *PrettyWriter) writeFields(f io.Writer, fields []*Field) (err error) {
 	return nil
 }
 
-func (t *PrettyWriter) writeErr(f io.Writer, lerr error) (err error) {
+func (t *PrettyWriter) writeErr(f io.Writer, lerr error, format string) (err error) {
 	if err = t.writeFormatted(f, "error=", t.StyleFieldErrorKey); err != nil {
 		return err
 	}
-	return t.writeFormatted(f, fmt.Sprintf("\"%s\"", lerr), t.StyleFieldErrorValue)
+	if format == "" {
+		format = "%s"
+	}
+	return t.writeFormatted(f, fmt.Sprintf("\""+format+"\"", lerr), t.StyleFieldErrorValue)
 }
 
 func (t *PrettyWriter) valueString(v interface{}) string {
