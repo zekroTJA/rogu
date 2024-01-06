@@ -22,3 +22,19 @@ Log levels can be set to a [`Logger`](https://pkg.go.dev/github.com/zekrotja/rog
 | `Info`  | `5` | `"info"`, `"inf"`, `"i"`, `"5"` |
 | `Debug` | `6` | `"debug"`, `"dbg"`, `"f"`, `"6"` |
 | `Trace` | `7` | `"trace"`, `"trc"`, `"t"`, `"7"` |
+
+## [`slog`](https://go.dev/blog/slog) Support
+
+The `rogu.Logger` can be used as `slog.Handler`, so that rogu's pretty writer can be used to format slog records.
+
+```go
+roguLogger := slog.New(rogu.NewLogger(rogu.NewPrettyWriter()))
+slog.SetDefault(roguLogger)
+
+slog.Info("Hello, world!")
+```
+> See [example/slog](example/slog) for a more complete example.
+
+**Because of the architecture of rogu, some implications of `slog` are not met.** Keep those in mind when using rogu as your slog backend!
+- In rogu loggers, the `caller` is recorded when an event has been sent (using `e.Send()` or `e.Msg(...)`). Slog on the other hand sets the caller to the function which has created the record/event.
+- Also, rogu records the event time when the event has been sent. Slog, on the other hand, records the event time when the record/event has been created.

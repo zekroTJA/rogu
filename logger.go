@@ -1,6 +1,7 @@
 package rogu
 
 import (
+	"log/slog"
 	"os"
 	"runtime"
 
@@ -12,6 +13,8 @@ import (
 // write commited events.
 type Logger interface {
 	Closer
+
+	slog.Handler
 
 	AddWriter(w Writer) Logger
 	Copy() *logger
